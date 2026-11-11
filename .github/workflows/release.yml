@@ -1,0 +1,106 @@
+name: Release Plugin ZIP
+
+# Ein Release entsteht, sobald ein Versions-Tag vX.Y.Z gepusht wird. Tags mit Bindestrich
+# (zum Beispiel v1.3.0-beta.1) werden als Vorabversion markiert.
+# Über „Run workflow“ (workflow_dispatch) läuft nur der Build als Probelauf, ohne Release.
+#
+# Sicherheit: Der Build-Job hat nur Leserechte und legt keine Zugangsdaten in .git/config ab.
+# Erst der Release-Job bekommt Schreibrechte und führt keinen Code aus dem Repo aus.
+# Fremde Actions sind über den Commit-SHA eingebunden, die Version steht im Kommentar.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PLUGIN_SLUG: wg-wartung
+  MAIN_FILE: wg-wartung.php
+  VERSION_CONST: WG_WARTUNG_VERSION
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Versionen prüfen
+        run: |
+          HEADER_VERSION="$(grep -m1 -E '^[[:space:]]*\*[[:space:]]*Version:' "$MAIN_FILE" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')"
+          CONST_VERSION="$(grep -m1 -E "define\([[:space:]]*'$VERSION_CONST'" "$MAIN_FILE" | sed -E "s/.*'$VERSION_CONST',[[:space:]]*'([^']+)'.*/\1/")"
+          echo "Plugin-Kopf: $HEADER_VERSION, $VERSION_CONST: $CONST_VERSION"
+          if [ -z "$HEADER_VERSION" ] || [ "$HEADER_VERSION" != "$CONST_VERSION" ]; then
+            echo "::error::Die Version im Plugin-Kopf ($HEADER_VERSION) passt nicht zur Konstante $VERSION_CONST ($CONST_VERSION)."
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            echo "Tag: $TAG_VERSION"
+            if [ "$TAG_VERSION" != "$HEADER_VERSION" ]; then
+              echo "::error::Die Tag-Version $TAG_VERSION passt nicht zur Version $HEADER_VERSION im Plugin-Kopf."
+              exit 1
+            fi
+          fi
+
+      - name: PHP-Syntax prüfen
+        run: |
+          find . -name '*.php' -not -path './.git/*' -not -path './vendor/*' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Plugin-ZIP bauen
+        run: |
+          STAGE="$RUNNER_TEMP/$PLUGIN_SLUG"
+          mkdir -p "$STAGE"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.gitignore' \
+            --exclude='.DS_Store' \
+            --exclude='README.md' \
+            --exclude='docs' \
+            --exclude='tests' \
+            --exclude='node_modules' \
+            --exclude='*.zip' \
+            ./ "$STAGE/"
+          cd "$RUNNER_TEMP"
+          zip -rq -X "$GITHUB_WORKSPACE/$PLUGIN_SLUG.zip" "$PLUGIN_SLUG"
+          unzip -l "$GITHUB_WORKSPACE/$PLUGIN_SLUG.zip" | tail -n 1
+
+      - name: Zip als Artefakt ablegen
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: plugin-zip
+          path: ${{ env.PLUGIN_SLUG }}.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Zip aus dem Build holen
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: plugin-zip
+
+      - name: GitHub-Release erstellen
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: ${{ env.PLUGIN_SLUG }}.zip
+          generate_release_notes: true
+          # Erst als Entwurf: wg-sign-release.sh signiert die Zip auf Jannos Mac und veröffentlicht danach.
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
