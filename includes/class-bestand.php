@@ -68,6 +68,10 @@ final class WG_Wartung_Bestand {
 				'version' => (string) $theme->get( 'Version' ),
 			),
 			'plugins' => $plugins,
+			// Was diese Version kann, damit das CRM keine Versionsnummern vergleichen muss
+			'kann'    => array( 'status', 'plugin-update', 'plugin-install', 'plugin-deactivate', 'cache-selbsttest' ),
+			'suite'   => WG_Wartung_Installieren::suite_stand(),
+			'cache'   => WG_Wartung_Installieren::cache_stand(),
 			'zeit'    => gmdate( 'c' ),
 		);
 	}

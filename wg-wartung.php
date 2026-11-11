@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WG Wartung
- * Description: Verbindung zum Servicebereich des WG-Digital-CRM. Meldet den Stand von WordPress, PHP und Plugins und spielt Plugin-Updates ein, wenn das CRM das mit seinem Schlüssel signiert anfordert. Ohne gültige Signatur antwortet das Plugin nicht.
+ * Description: Verbindung zum Servicebereich des WG-Digital-CRM. Meldet den Stand von WordPress, PHP und Plugins, spielt Plugin-Updates ein und installiert über die WG Suite freigegebene WG-Plugins, wenn das CRM das mit seinem Schlüssel signiert anfordert. Ohne gültige Signatur antwortet das Plugin nicht.
  * Version: 0.1.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/class-signatur.php';
 require_once __DIR__ . '/includes/class-protokoll.php';
 require_once __DIR__ . '/includes/class-bestand.php';
 require_once __DIR__ . '/includes/class-aktualisieren.php';
+require_once __DIR__ . '/includes/class-installieren.php';
 require_once __DIR__ . '/includes/class-rest.php';
 require_once __DIR__ . '/includes/class-seite.php';
 
