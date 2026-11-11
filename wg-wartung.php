@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WG Wartung
  * Description: Verbindung zum Servicebereich des WG-Digital-CRM. Meldet den Stand von WordPress, PHP und Plugins, spielt Plugin-Updates ein und installiert über die WG Suite freigegebene WG-Plugins, wenn das CRM das mit seinem Schlüssel signiert anfordert. Ohne gültige Signatur antwortet das Plugin nicht.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Author: WG-Digital
@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WG_WARTUNG_VERSION', '0.1.0' );
+define( 'WG_WARTUNG_VERSION', '0.2.0' );
 
 /*
  * Öffentlicher Schlüssel des CRM unter crm.wg-digital.xyz (Ed25519, Base64),
